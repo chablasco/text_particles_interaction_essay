@@ -29,11 +29,7 @@ let columnWidth = 800;
 let columnX;
 
 function preload() {
-  // Ersätt med din egen textfil eller hårdkoda texten
-  fileLines = `När vi möter varandra med nyfikenhet istället för rädsla,
-öppnar vi dörrar till en värld där alla kan höra till.
-Det kräver mod att vara öppen,
-men i öppenheten finns möjlighet till förändring.`.split("\\n");
+  fileLines = loadStrings("assets/essay.txt");
 }
 
 function setup() {
