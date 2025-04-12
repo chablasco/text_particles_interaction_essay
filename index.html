@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <title>CB Scrolling Text Particles Interaction</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      height: 100%;
+      background: white;
+    }
+    canvas {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+<script>
+let particles = [];
+let fileLines = [];
+let fontSize = 32;
+let lineSpacing = 48;
+let scrollY = 0;
+let scrollSpeed = 20;
+let columnWidth = 800;
+let columnX;
+
+function preload() {
+  // Ersätt med din egen textfil eller hårdkoda texten
+  fileLines = `När vi möter varandra med nyfikenhet istället för rädsla,
+öppnar vi dörrar till en värld där alla kan höra till.
+Det kräver mod att vara öppen,
+men i öppenheten finns möjlighet till förändring.`.split("\\n");
+}
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  textFont('Arial');
+  textSize(fontSize);
+  columnX = (width - columnWidth) / 2;
+  createParticlesJustified(fileLines);
+}
+
+function draw() {
+  background(255);
+  push();
+  translate(0, -scrollY);
+  for (let p of particles) {
+    p.update();
+    p.display();
+  }
+  pop();
+}
+
+function mouseWheel(event) {
+  scrollY += event.delta > 0 ? scrollSpeed : -scrollSpeed;
+  scrollY = constrain(scrollY, 0, maxScroll());
+}
+
+function maxScroll() {
+  if (particles.length === 0) return 0;
+  let lastY = 0;
+  for (let p of particles) {
+    if (p.home.y > lastY) lastY = p.home.y;
+  }
+  return max(0, lastY + lineSpacing - height);
+}
+
+function createParticlesJustified(lines) {
+  particles = [];
+  let y = lineSpacing;
+
+  for (let originalLine of lines) {
+    if (originalLine.trim() === "") {
+      y += lineSpacing;
+      continue;
+    }
+
+    let wrappedLines = wrapLine(originalLine, columnWidth);
+
+    for (let i = 0; i < wrappedLines.length; i++) {
+      let line = wrappedLines[i];
+      let isLastLine = (i === wrappedLines.length - 1);
+      let words = line.split(" ");
+      let totalTextWidth = 0;
+
+      for (let word of words) {
+        totalTextWidth += textWidth(word);
+      }
+
+      let numSpaces = words.length - 1;
+      let extraSpace = (numSpaces > 0 && !isLastLine) ? (columnWidth - totalTextWidth) / numSpaces : textWidth(" ");
+      let x = columnX;
+
+      for (let j = 0; j < words.length; j++) {
+        let word = words[j];
+        for (let k = 0; k < word.length; k++) {
+          let c = word[k];
+          let w = textWidth(c);
+          particles.push(new LetterParticle(c, x, y));
+          x += w;
+        }
+
+        if (j < words.length - 1) {
+          x += extraSpace;
+        }
+      }
+      y += lineSpacing;
+    }
+  }
+}
+
+function wrapLine(txt, maxWidth) {
+  let words = txt.split(" ");
+  let lines = [];
+  let currentLine = "";
+
+  for (let word of words) {
+    let testLine = currentLine.length === 0 ? word : currentLine + " " + word;
+    if (textWidth(testLine) < maxWidth) {
+      currentLine = testLine;
+    } else {
+      lines.push(currentLine);
+      currentLine = word;
+    }
+  }
+
+  if (currentLine.length > 0) {
+    lines.push(currentLine);
+  }
+
+  return lines;
+}
+
+class LetterParticle {
+  constructor(letter, x, y) {
+    this.letter = letter;
+    this.home = createVector(x, y);
+    this.pos = createVector(x, y);
+    this.vel = createVector();
+    this.acc = createVector();
+  }
+
+  update() {
+    let mouse = createVector(mouseX, mouseY + scrollY);
+    let d = p5.Vector.dist(mouse, this.pos);
+    if (d < 100) {
+      let flee = p5.Vector.sub(this.pos, mouse);
+      flee.normalize();
+      let strength = map(d, 0, 100, 5, 0);
+      flee.mult(strength);
+      this.applyForce(flee);
+    }
+
+    let homeForce = p5.Vector.sub(this.home, this.pos);
+    homeForce.mult(0.05);
+    this.applyForce(homeForce);
+
+    this.vel.add(this.acc);
+    this.pos.add(this.vel);
+    this.vel.mult(0.85);
+    this.acc.mult(0);
+  }
+
+  applyForce(force) {
+    this.acc.add(force);
+  }
+
+  display() {
+    fill(0);
+    noStroke();
+    text(this.letter, this.pos.x, this.pos.y);
+  }
+}
+</script>
+</body>
+</html>
